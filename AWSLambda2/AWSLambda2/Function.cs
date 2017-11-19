@@ -1,4 +1,3 @@
-using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -9,10 +8,9 @@ using Alexa.NET.Response;
 using Amazon.Lambda.Core;
 
 // Assembly attribute to enable the Lambda function's JSON input to be converted into a .NET class.
-
 [assembly: LambdaSerializer(typeof(Amazon.Lambda.Serialization.Json.JsonSerializer))]
 
-namespace DataLeakCheckerLambda
+namespace LambdaAlexa
 {
     public class Function
     {
@@ -21,45 +19,35 @@ namespace DataLeakCheckerLambda
 
         public async Task<SkillResponse> FunctionHandler(SkillRequest input, ILambdaContext context)
         {
-            var logger = context.Logger;
-            try
+
+            var requestType = input.GetRequestType();
+            if (requestType == typeof(IntentRequest))
             {
+                var inputRequest = input.Request as IntentRequest;
+                DataBreach db = new DataBreach();
+                var email = inputRequest?.Intent.Slots["Email"].Value;
 
-
-                var requestType = input.GetRequestType();
-                if (requestType == typeof(IntentRequest))
+                var apiresponse = await db.CheckEMailInBreach(email);
+                string speak;
+                switch (apiresponse)
                 {
-                    var inputRequest = input.Request as IntentRequest;
-                    DataBreach db = new DataBreach();
-                    var email = inputRequest?.Intent.Slots["Email"].Value;
-
-                    var apiresponse = await db.CheckEMailInBreach(email);
-                    string speak;
-                    switch (apiresponse)
-                    {
-                        case Codes.Yes:
-                            speak = $"{email} has been in a databreach, change any passwords now!";
-                            break;
-                        case Codes.No:
-                            speak = $"{email} has not been in a databreach";
-                            break;
-                        default:
-                            speak = $"I'm sorry, there has been an exception. Please re-try";
-                            break;
-                    }
-                    return MakeSkillResponse(
-                        speak,
-                        true);
+                    case Codes.Yes:
+                        speak = $"{email} has been in a databreach, change any passwords now!";
+                        break;
+                    case Codes.No:
+                        speak = $"{email} has not been in a databreach";
+                        break;
+                    default:
+                        speak = $"I'm sorry, there has been an exception. Please re-try";
+                        break;
                 }
                 return MakeSkillResponse(
+                    speak,
+                    true);
+            }
+            return MakeSkillResponse(
                 $"I don't know how to handle this intent. Please say something like Alexa, ask {INVOCATION_NAME} if colinhughes98@gmail.com address was in a breach.",
                 true);
-            }
-            catch (Exception ex)
-            {
-                logger.Log(ex.Message);
-                return MakeSkillResponse("Error", true);
-            }
         }
 
 
@@ -70,12 +58,12 @@ namespace DataLeakCheckerLambda
             var response = new ResponseBody
             {
                 ShouldEndSession = shouldEndSession,
-                OutputSpeech = new PlainTextOutputSpeech {Text = outputSpeech}
+                OutputSpeech = new PlainTextOutputSpeech { Text = outputSpeech }
             };
 
             if (repromptText != null)
             {
-                response.Reprompt = new Reprompt() {OutputSpeech = new PlainTextOutputSpeech() {Text = repromptText}};
+                response.Reprompt = new Reprompt() { OutputSpeech = new PlainTextOutputSpeech() { Text = repromptText } };
             }
 
             var skillResponse = new SkillResponse
@@ -97,7 +85,7 @@ namespace DataLeakCheckerLambda
         }
         public async Task<Codes> CheckEMailInBreach(string emailAddress)
         {
-                                  
+
             request.DefaultRequestHeaders.Add("user-agent", "Leaked-Data-Chekcer");
             var resp = await request.GetAsync($"https://haveibeenpwned.com/api/v2/breachedaccount/{emailAddress}");
             switch (resp.StatusCode)
@@ -108,7 +96,7 @@ namespace DataLeakCheckerLambda
                     return Codes.No;
                 default:
                     return Codes.Error;
-            }            
+            }
         }
     }
 
