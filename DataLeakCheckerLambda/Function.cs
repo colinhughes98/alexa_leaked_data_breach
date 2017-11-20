@@ -1,4 +1,6 @@
 using System;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -14,18 +16,16 @@ using Amazon.Lambda.Core;
 
 namespace DataLeakCheckerLambda
 {
-    public class Function
+    public class Function : AlexaSkillBase
     {
-
         public const string INVOCATION_NAME = "Leaked Data Checker";
 
         public async Task<SkillResponse> FunctionHandler(SkillRequest input, ILambdaContext context)
         {
             var logger = context.Logger;
+            
             try
-            {
-
-
+            {                
                 var requestType = input.GetRequestType();
                 if (requestType == typeof(IntentRequest))
                 {
@@ -33,23 +33,28 @@ namespace DataLeakCheckerLambda
                     DataBreach db = new DataBreach();
                     var email = inputRequest?.Intent.Slots["Email"].Value;
 
-                    var apiresponse = await db.CheckEMailInBreach(email);
-                    string speak;
-                    switch (apiresponse)
+                    var final = Sanitize(email);
+                    if (!string.IsNullOrEmpty(final))
                     {
-                        case Codes.Yes:
-                            speak = $"{email} has been in a databreach, change any passwords now!";
-                            break;
-                        case Codes.No:
-                            speak = $"{email} has not been in a databreach";
-                            break;
-                        default:
-                            speak = $"I'm sorry, there has been an exception. Please re-try";
-                            break;
+                        var apiresponse = await db.CheckEMailInBreach(final);
+                        string speak;
+                        switch (apiresponse)
+                        {
+                            case Codes.Yes:
+                                speak = $"{final} has been in a databreach, change any passwords now!";
+                                break;
+                            case Codes.No:
+                                speak = $"{final} has not been in a databreach";
+                                break;
+                            default:
+                                speak = $"I'm sorry, there has been an exception. Please re-try";
+                                break;
+                        }
+
+                        return MakeSkillResponse(
+                            speak,
+                            true);
                     }
-                    return MakeSkillResponse(
-                        speak,
-                        true);
                 }
                 return MakeSkillResponse(
                 $"I don't know how to handle this intent. Please say something like Alexa, ask {INVOCATION_NAME} if colinhughes98@gmail.com address was in a breach.",
@@ -62,29 +67,16 @@ namespace DataLeakCheckerLambda
             }
         }
 
-
-        private SkillResponse MakeSkillResponse(string outputSpeech,
-            bool shouldEndSession,
-            string repromptText = "Just say, has colinhughes98@gmail has been in a breach to learn more. To exit, say, exit.")
+        private static string Sanitize(string email)
         {
-            var response = new ResponseBody
-            {
-                ShouldEndSession = shouldEndSession,
-                OutputSpeech = new PlainTextOutputSpeech {Text = outputSpeech}
-            };
+            if (string.IsNullOrEmpty(email)) return string.Empty;
 
-            if (repromptText != null)
-            {
-                response.Reprompt = new Reprompt() {OutputSpeech = new PlainTextOutputSpeech() {Text = repromptText}};
-            }
+            email = email.Replace("At", "@").Replace("at", "@");
+            var words = email.Split(' ');
 
-            var skillResponse = new SkillResponse
-            {
-                Response = response,
-                Version = "1.0"
-            };
-            return skillResponse;
-        }
+            var final = string.Join("", words);
+            return final;
+        }       
     }
 
     public class DataBreach
