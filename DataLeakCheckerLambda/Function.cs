@@ -19,53 +19,7 @@ namespace DataLeakCheckerLambda
 {
     public class Function : AlexaSkillBase
     {
-         
-        //public async Task<SkillResponse> FunctionHandler(SkillRequest input, ILambdaContext context)
-        //{
-        //    var logger = context.Logger;
-
-        //    try
-        //    {                
-        //        var requestType = input.GetRequestType();
-        //        if (requestType == typeof(IntentRequest))
-        //        {
-        //            var inputRequest = input.Request as IntentRequest;
-        //            DataBreach db = new DataBreach();
-        //            var email = inputRequest?.Intent.Slots["Email"].Value;
-
-        //            var final = Sanitize(email);
-        //            if (!string.IsNullOrEmpty(final))
-        //            {
-        //                var apiresponse = await db.CheckEMailInBreach(final);
-        //                string speak;
-        //                switch (apiresponse)
-        //                {
-        //                    case Codes.Yes:
-        //                        speak = $"{final} has been in a databreach, change any passwords now!";
-        //                        break;
-        //                    case Codes.No:
-        //                        speak = $"{final} has not been in a databreach";
-        //                        break;
-        //                    default:
-        //                        speak = $"I'm sorry, there has been an exception. Please re-try";
-        //                        break;
-        //                }
-
-        //                return MakeSkillResponse(
-        //                    speak,
-        //                    true);
-        //            }
-        //        }
-        //        return MakeSkillResponse(
-        //        $"I don't know how to handle this intent. Please say something like Alexa, ask {InvocationName} if colinhughes98@gmail.com address was in a breach.",
-        //        true);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        logger.Log(ex.Message);
-        //        return MakeSkillResponse("Error", true);
-        //    }
-        //}
+                 
 
         protected override async Task<string> DoWork(IDictionary<string, Slot> slots)
         {
