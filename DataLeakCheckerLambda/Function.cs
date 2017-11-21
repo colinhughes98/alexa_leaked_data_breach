@@ -17,19 +17,13 @@ using Amazon.Lambda.Core;
 
 namespace DataLeakCheckerLambda
 {
-    public class Function : AlexaSkillBase<SkillResponse>
+    public class Function : AlexaSkillBase
     {
-        public const string INVOCATION_NAME = "Leaked Data Checker";
-
-        protected override Task<Task<SkillResponse>> FunctionHandler(SkillRequest input, ILambdaContext context)
-        {
-            return base.FunctionHandler(input, context);
-        }
-
+         
         //public async Task<SkillResponse> FunctionHandler(SkillRequest input, ILambdaContext context)
         //{
         //    var logger = context.Logger;
-            
+
         //    try
         //    {                
         //        var requestType = input.GetRequestType();
@@ -63,7 +57,7 @@ namespace DataLeakCheckerLambda
         //            }
         //        }
         //        return MakeSkillResponse(
-        //        $"I don't know how to handle this intent. Please say something like Alexa, ask {INVOCATION_NAME} if colinhughes98@gmail.com address was in a breach.",
+        //        $"I don't know how to handle this intent. Please say something like Alexa, ask {InvocationName} if colinhughes98@gmail.com address was in a breach.",
         //        true);
         //    }
         //    catch (Exception ex)
@@ -73,22 +67,43 @@ namespace DataLeakCheckerLambda
         //    }
         //}
 
-        protected override SkillResponse DoWork(IDictionary<string, Slot> slots)
+        protected override async Task<string> DoWork(IDictionary<string, Slot> slots)
         {
-            throw new NotImplementedException();
+            InvocationName = "Leaked Data Checker";
+            DataBreach db = new DataBreach();
+            var email = slots["Email"].Value;
+            var final = Sanitize(email);
+            var speak = "I'm sorry, there has been an exception. Please re-try";
+            if (!string.IsNullOrEmpty(final))
+            {
+                var apiresponse = await db.CheckEMailInBreach(final);
+                
+                switch (apiresponse)
+                {
+                    case Codes.Yes:
+                        speak = $"{final} has been in a databreach, change any passwords now!";
+                        break;
+                    case Codes.No:
+                        speak = $"{final} has not been in a databreach";
+                        break;
+                    default:
+                        speak = $"I'm sorry, there has been an error from Troy's web service. Please re-try";
+                        break;
+                }            
+            }
+            return speak;           
         }
 
         private static string Sanitize(string email)
         {
             if (string.IsNullOrEmpty(email)) return string.Empty;
 
-            email = email.Replace("At", "@").Replace("at", "@");
+            email = email.ToUpper().Replace("AT", "@").Replace("DOT", ".");
             var words = email.Split(' ');
 
             var final = string.Join("", words);
             return final;
         }
-
     }
 
     public class DataBreach
@@ -99,9 +114,10 @@ namespace DataLeakCheckerLambda
         {
             request = new HttpClient();
         }
+
         public async Task<Codes> CheckEMailInBreach(string emailAddress)
         {
-                                  
+
             request.DefaultRequestHeaders.Add("user-agent", "Leaked-Data-Chekcer");
             var resp = await request.GetAsync($"https://haveibeenpwned.com/api/v2/breachedaccount/{emailAddress}");
             switch (resp.StatusCode)
@@ -112,7 +128,7 @@ namespace DataLeakCheckerLambda
                     return Codes.No;
                 default:
                     return Codes.Error;
-            }            
+            }
         }
     }
 

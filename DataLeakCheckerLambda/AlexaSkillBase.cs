@@ -12,7 +12,9 @@ namespace DataLeakCheckerLambda
 
     public abstract class AlexaSkillBase
     {
-        protected const string INVOCATION_NAME = "Leaked Data Checker";
+        protected string InvocationName { get; set; }
+
+        protected string RepromptMessage { get; set; }
 
         protected virtual async Task<SkillResponse> FunctionHandler(SkillRequest input, ILambdaContext context)
         {
@@ -25,40 +27,13 @@ namespace DataLeakCheckerLambda
                 {
                     var inputRequest = input.Request as IntentRequest;
                     
-                    
-
-                    var a = await DoWork(inputRequest?.Intent.Slots);
-
-
-                    //below- remove
-                    //var email = inputRequest?.Intent.Slots["Email"].Value;
-                    //var final = Sanitize(email);
-                    //if (!string.IsNullOrEmpty(final))
-                    //{
-                    //    DataBreach db = new DataBreach();
-
-                    //    var apiresponse = await db.CheckEMailInBreach(final);
-                    //    string speak;
-                    //    switch (apiresponse)
-                    //    {
-                    //        case Codes.Yes:
-                    //            speak = $"{final} has been in a databreach, change any passwords now!";
-                    //            break;
-                    //        case Codes.No:
-                    //            speak = $"{final} has not been in a databreach";
-                    //            break;
-                    //        default:
-                    //            speak = $"I'm sorry, there has been an exception. Please re-try";
-                    //            break;
-                    //    }
-
-                    //    return MakeSkillResponse(
-                    //        speak,
-                    //        true);
-                    //}
+                   var response = await DoWork(inputRequest?.Intent.Slots);
+                    return MakeSkillResponse(
+                        response,
+                        true);
                 }
                 return MakeSkillResponse(
-                    $"I don't know how to handle this intent. Please say something like Alexa, ask {INVOCATION_NAME} if colinhughes98@gmail.com address was in a breach.",
+                    $"I don't know how to handle this intent. Please say something like Alexa, ask {InvocationName} if {RepromptMessage}.",
                     true);
             }
             catch (Exception ex)
@@ -69,8 +44,7 @@ namespace DataLeakCheckerLambda
         }
         
         protected SkillResponse MakeSkillResponse(string outputSpeech,
-           bool shouldEndSession,
-           string repromptText = null)
+           bool shouldEndSession)
         {
             var response = new ResponseBody
             {
@@ -78,10 +52,10 @@ namespace DataLeakCheckerLambda
                 OutputSpeech = new PlainTextOutputSpeech { Text = outputSpeech }
             };
 
-            if (repromptText != null)
-            {
-                response.Reprompt = new Reprompt() { OutputSpeech = new PlainTextOutputSpeech() { Text = repromptText } };
-            }
+            //if (repromptText != null)
+            //{
+            //    response.Reprompt = new Reprompt() { OutputSpeech = new PlainTextOutputSpeech() { Text = repromptText } };
+            //}
 
             var skillResponse = new SkillResponse()
             {
@@ -91,7 +65,8 @@ namespace DataLeakCheckerLambda
             return skillResponse;
         }
 
-        protected abstract Task<SkillResponse> DoWork(IDictionary<string, Slot> slots);
+        //protected abstract Task<SkillResponse> DoWork(IDictionary<string, Slot> slots);
+        protected abstract Task<string> DoWork(IDictionary<string, Slot> slots);
     }
 
  }
